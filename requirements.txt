@@ -1,0 +1,12 @@
+click>=8.0.0
+pathlib2>=2.3.0
+python-magic>=0.4.24
+gitignore-parser>=0.1.1
+colorama>=0.4.4
+rich>=13.0.0
+streamlit>=1.28.0
+pandas>=1.5.0
+plotly>=5.15.0
+google-api-python-client>=2.0.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.2.0
