@@ -243,16 +243,6 @@ class CustomSearcher(BaseSearcher):
         pass
 ```
 
-## 📝 License
-
-[Add your license information here]
-
-## 🤝 Contributing
-
-[Add contribution guidelines here]
-
----
-
 **Built with ❤️ using Python, Streamlit, and AI**
 
 
