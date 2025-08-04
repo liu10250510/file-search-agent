@@ -5,6 +5,7 @@ A powerful tool for searching files on your local machine with plans to extend t
 ## Features
 
 ### Current Features (Local Search)
+- **🤖 AI-Powered Search**: Natural language search using LLMs (OpenAI/Anthropic) with intelligent query interpretation
 - **Name-based search**: Find files by filename patterns with wildcard support
 - **Content search**: Search inside text files for specific content
 - **Size-based search**: Find files within specific size ranges
@@ -86,22 +87,83 @@ The web interface provides:
 - **Content match highlighting** for text searches
 
 #### Web Interface Features:
-- 🔍 **Search Types**: Name patterns, content search, and size-based filtering
+- 🔍 **Search Types**: Name patterns, content search, size-based filtering, and AI-powered natural language search
+- 📂 **Search Path Input**: Simple text field to specify search directory (e.g., ~/Downloads, ~/Documents, .)
 - ⚙️ **Configuration Panel**: Adjust search depth, include/exclude patterns, and more
 - 📊 **Visualizations**: File type pie charts, size histograms, and timeline views
 - 💾 **Export Options**: Download results in CSV or JSON format
 - 📜 **Search History**: Track and review previous searches
 - 🔧 **Advanced Filters**: Filter results by file type, size range, and filename
 
+### 🤖 AI-Powered Search
+
+The File Search Agent now includes AI-powered search capabilities that let you search using natural language queries.
+
+#### Setup AI Search
+
+1. **Install AI dependencies** (if not already installed):
+```bash
+pip install pydantic-ai openai anthropic
+```
+
+2. **Get an API key**:
+   - For OpenAI: Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+   - For Anthropic: Get an API key from [Anthropic Console](https://console.anthropic.com/)
+
+3. **Configure in the web interface**:
+   - Select "AI Search" from the search type dropdown
+   - Choose your preferred AI provider (OpenAI or Anthropic)
+   - Select the model (e.g., gpt-4o-mini, claude-3-5-haiku)
+   - Enter your API key in the sidebar
+
+#### AI Search Examples
+
+Instead of traditional patterns, use natural language queries:
+
+```
+"Find my Python scripts for data analysis"
+"Show me configuration files for my web server"
+"Look for documents about machine learning"
+"Find test files or unit tests"
+"Show me README files and documentation"
+"Find JavaScript files that handle user authentication"
+"Look for log files from the last week"
+"Find images and photos in my project folders"
+```
+
+#### How AI Search Works
+
+1. **Query Interpretation**: The AI analyzes your natural language query to understand what you're looking for
+2. **Search Strategy**: It generates multiple search strategies including:
+   - Relevant file patterns (e.g., *.py, *.config, *.md)
+   - Content keywords and synonyms
+   - Alternative naming conventions
+3. **Multi-Modal Search**: Combines filename, content, and metadata searches
+4. **Intelligent Ranking**: Results are ranked by relevance with AI confidence scores
+
+#### AI Search Features
+
+- **Natural Language Processing**: Understands context and intent
+- **Smart Pattern Generation**: Creates effective search patterns automatically
+- **Synonym Recognition**: Finds files using related terms
+- **Multi-Strategy Search**: Combines multiple search approaches
+- **Confidence Scoring**: Shows how confident the AI is about results
+- **Fallback Handling**: Gracefully handles API errors with traditional search
+
 ## Quick Start Examples
 
 ### Using the Web Interface
 1. **Launch the app**: `python streamlit_app.py --launch`
 2. **Open your browser** to the displayed URL (usually http://localhost:8501)
-3. **Configure your search** using the sidebar options
-4. **Enter search criteria** in the main panel
-5. **Click "🔍 Search"** to see results with visualizations
-6. **Export results** using the Export tab
+3. **Choose search type** from the sidebar (AI Search, Name, Content, or Size)
+4. **Enter search path** (e.g., ~/Downloads, ~/Documents, . for current directory)
+5. **Enter your search query** in the appropriate format:
+   - **AI Search**: Natural language (e.g., "Find Lucy's resume files")
+   - **Name Search**: File patterns (e.g., "*.pdf", "*resume*")
+   - **Content Search**: Text to find inside files
+   - **Size Search**: Specify minimum/maximum file sizes
+6. **Click "🔍 Search"** to see results with visualizations
+7. **Export results** using the Export tab
 
 ### Command Line Interface
 
@@ -118,7 +180,7 @@ python main.py name "*.txt" ~ --include-hidden
 ```bash
 python main.py content "function main" /path/to/search
 python main.py content "TODO" . --file-pattern "*.py" --file-pattern "*.js"
-python main.py content "import numpy" . --case-sensitive
+python main.py content "import numpy" .
 ```
 
 #### Search by file size
@@ -140,7 +202,6 @@ python main.py size . --max-size 10MB --format json
 - `--max-depth N`: Limit search depth
 - `--include "*.pattern"`: Include only files matching patterns
 - `--exclude "*.pattern"`: Exclude files matching patterns
-- `--case-sensitive`: Enable case-sensitive search
 
 #### Examples
 ```bash
@@ -175,7 +236,6 @@ python main.py config-set output.format json
   "search": {
     "include_hidden": false,
     "max_depth": null,
-    "case_sensitive": false,
     "exclude_patterns": [
       "*.pyc", "__pycache__", ".git", ".svn", 
       "node_modules", ".DS_Store", "Thumbs.db", "*.log", "*.tmp"

@@ -19,6 +19,13 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.searchers import LocalFileSearcher, SearchResult
+# Try to import AI searcher
+try:
+    from src.searchers import AIFileSearcher, AI_SEARCHER_AVAILABLE
+except ImportError:
+    AIFileSearcher = None
+    AI_SEARCHER_AVAILABLE = False
+
 from src.config import Config
 
 # Configure logging
@@ -61,11 +68,51 @@ class StreamlitApp:
         st.sidebar.header("⚙️ Search Configuration")
         
         # Search type selection
+        search_types = ["Name", "Content", "Size"]
+        if AI_SEARCHER_AVAILABLE:
+            search_types.insert(0, "AI Search")  # Add AI search as first option
+        
         search_type = st.sidebar.selectbox(
             "Search Type",
-            ["Name", "Content", "Size"],
+            search_types,
             help="Choose the type of search to perform"
         )
+        
+        # AI Search configuration
+        if search_type == "AI Search" and AI_SEARCHER_AVAILABLE:
+            st.sidebar.subheader("🤖 AI Configuration")
+            
+            model_provider = st.sidebar.selectbox(
+                "AI Model Provider",
+                ["openai", "anthropic"],
+                help="Choose the AI model provider"
+            )
+            
+            if model_provider == "openai":
+                model_options = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
+            else:  # anthropic
+                model_options = ["claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"]
+            
+            model_name = st.sidebar.selectbox(
+                "Model",
+                model_options,
+                help="Choose the specific model to use"
+            )
+            
+            # API key input
+            api_key_help = "OpenAI API Key" if model_provider == "openai" else "Anthropic API Key"
+            api_key = st.sidebar.text_input(
+                api_key_help,
+                type="password",
+                help=f"Enter your {api_key_help}. You can also set it as an environment variable."
+            )
+            
+            # Store AI config in session state
+            st.session_state.ai_config = {
+                'model_provider': model_provider,
+                'model_name': model_name,
+                'api_key': api_key
+            }
         
         # Common options
         st.sidebar.subheader("🔧 Options")
@@ -74,12 +121,6 @@ class StreamlitApp:
             "Include hidden files",
             value=self.search_config.get('include_hidden', False),
             help="Include files and directories starting with '.'"
-        )
-        
-        case_sensitive = st.sidebar.checkbox(
-            "Case sensitive",
-            value=self.search_config.get('case_sensitive', False),
-            help="Perform case-sensitive searches"
         )
         
         max_depth = st.sidebar.number_input(
@@ -140,7 +181,6 @@ class StreamlitApp:
         st.session_state.search_config = {
             'search_type': search_type,
             'include_hidden': include_hidden,
-            'case_sensitive': case_sensitive,
             'max_depth': max_depth,
             'max_results': max_results,
             'exclude_patterns': exclude_patterns,
@@ -177,14 +217,32 @@ class StreamlitApp:
         max_size = None
         
         with col1:
-            # Search path
+            # Search path input
             search_path = st.text_input(
                 "Search Path",
                 value=str(Path.home()),
-                help="Directory path to search in"
+                help="Directory path to search in. Examples: ~/Downloads, ~/Documents, . (current directory)"
             )
             
-            if search_type == "Name":
+            if search_type == "AI Search":
+                pattern = st.text_area(
+                    "Natural Language Query",
+                    placeholder="e.g., 'Find all PDF files in my Downloads', 'Show me Lucy's resume files', 'Find Python scripts for data analysis', 'Look for configuration files', 'Find images from last month'",
+                    help="Describe what you're looking for in natural language. The AI will interpret your query and search accordingly. Be specific about file types, names, or content you're looking for.",
+                    height=100
+                )
+                
+                # Show AI status
+                if AI_SEARCHER_AVAILABLE:
+                    ai_config = st.session_state.get('ai_config', {})
+                    if ai_config.get('api_key'):
+                        st.success("✅ AI search is ready")
+                    else:
+                        st.warning("⚠️ Please enter your API key in the sidebar to use AI search")
+                else:
+                    st.error("❌ AI search is not available. Please install required packages: pip install pydantic-ai openai anthropic")
+                    
+            elif search_type == "Name":
                 pattern = st.text_input(
                     "File Name Pattern",
                     placeholder="e.g., *.py, config*, document.txt",
@@ -279,7 +337,19 @@ class StreamlitApp:
         
         # Perform search
         if search_button:
-            if search_type in ["Name", "Content"] and not pattern:
+            # Validation for different search types
+            if search_type == "AI Search":
+                if not pattern:
+                    st.error("Please enter a natural language query")
+                    return
+                if not AI_SEARCHER_AVAILABLE:
+                    st.error("AI search is not available. Please install required packages.")
+                    return
+                ai_config = st.session_state.get('ai_config', {})
+                if not ai_config.get('api_key'):
+                    st.error("Please enter your API key in the sidebar to use AI search")
+                    return
+            elif search_type in ["Name", "Content"] and not pattern:
                 st.error("Please enter a search pattern")
                 return
             
@@ -311,26 +381,45 @@ class StreamlitApp:
             max_depth = min(config['max_depth'], 20)  # Cap at 20 levels
             max_results = min(config['max_results'], 10000)  # Cap at 10k results
             
-            # Initialize searcher
-            searcher = LocalFileSearcher(
-                include_hidden=config['include_hidden'],
-                max_depth=max_depth,
-                include_patterns=config['include_patterns'],
-                exclude_patterns=config['exclude_patterns'],
-                exclude_paths=config['exclude_paths']
-            )
+            # Initialize searcher based on search type
+            if search_type == "AI Search":
+                # Set up API key as environment variable
+                ai_config = st.session_state.get('ai_config', {})
+                if ai_config.get('model_provider') == 'openai':
+                    os.environ['OPENAI_API_KEY'] = ai_config['api_key']
+                else:  # anthropic
+                    os.environ['ANTHROPIC_API_KEY'] = ai_config['api_key']
+                
+                searcher = AIFileSearcher(
+                    model_provider=ai_config['model_provider'],
+                    model_name=ai_config['model_name']
+                )
+            else:
+                searcher = LocalFileSearcher(
+                    include_hidden=config['include_hidden'],
+                    max_depth=max_depth,
+                    include_patterns=config['include_patterns'],
+                    exclude_patterns=config['exclude_patterns'],
+                    exclude_paths=config['exclude_paths']
+                )
             
             # Show progress
-            with st.spinner(f"Searching files by {search_type.lower()}..."):
+            search_label = "AI search" if search_type == "AI Search" else search_type.lower()
+            with st.spinner(f"Performing {search_label}..."):
                 results = []
                 processed_count = 0
                 max_iterations = 50000  # Safety limit to prevent infinite loops
                 
-                if search_type == "Name":
+                if search_type == "AI Search":
+                    result_generator = searcher.ai_search(
+                        search_path=search_path,
+                        query=pattern,
+                        max_depth=max_depth
+                    )
+                elif search_type == "Name":
                     result_generator = searcher.search_by_name(
                         search_path=search_path,
-                        pattern=pattern,
-                        case_sensitive=config['case_sensitive']
+                        pattern=pattern
                     )
                 elif search_type == "Content":
                     fp_list = [fp.strip() for fp in file_patterns.split(',')] if file_patterns else None
@@ -340,7 +429,6 @@ class StreamlitApp:
                         search_path=search_path,
                         pattern=pattern,
                         file_patterns=fp_list,
-                        case_sensitive=config['case_sensitive'],
                         max_file_size=max_file_size_bytes
                     )
                 else:  # Size
@@ -372,6 +460,9 @@ class StreamlitApp:
                 # Create appropriate pattern description for history
                 if search_type == "Size":
                     pattern_desc = f"min: {min_size or 'none'}, max: {max_size or 'none'}"
+                elif search_type == "AI Search":
+                    # Truncate long queries for history display
+                    pattern_desc = pattern[:100] + "..." if len(pattern) > 100 else pattern
                 else:
                     pattern_desc = pattern or "no pattern"
                 
@@ -485,15 +576,6 @@ class StreamlitApp:
             use_container_width=True,
             hide_index=True
         )
-        
-        # Show content matches for content searches
-        if any(r.matches for r in results):
-            st.subheader("🔍 Content Matches")
-            for i, result in enumerate(results):
-                if result.matches:
-                    with st.expander(f"📄 {result.name}"):
-                        for match in result.matches[:10]:  # Show first 10 matches
-                            st.code(match, language="text")
     
     def _render_results_charts(self, results: List[SearchResult]):
         """Render visualization charts"""

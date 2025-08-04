@@ -36,7 +36,6 @@ def cli(ctx, verbose, config):
 @cli.command()
 @click.argument('pattern')
 @click.argument('search_path', default='.')
-@click.option('--case-sensitive', is_flag=True, help='Case sensitive search')
 @click.option('--include-hidden', is_flag=True, help='Include hidden files')
 @click.option('--max-depth', type=int, help='Maximum directory depth to search')
 @click.option('--include', multiple=True, help='Include file patterns (e.g., *.py)')
@@ -46,7 +45,7 @@ def cli(ctx, verbose, config):
               default='table', help='Output format')
 @click.option('--max-results', type=int, default=100, help='Maximum number of results')
 @click.pass_context
-def name(ctx, pattern, search_path, case_sensitive, include_hidden, max_depth, 
+def name(ctx, pattern, search_path, include_hidden, max_depth, 
          include, exclude, exclude_path, output_format, max_results):
     """Search files by name pattern"""
     config = ctx.obj['config']
@@ -77,8 +76,7 @@ def name(ctx, pattern, search_path, case_sensitive, include_hidden, max_depth,
         with formatter.show_progress("Searching files by name..."):
             results = searcher.search_by_name(
                 search_path=search_path,
-                pattern=pattern,
-                case_sensitive=case_sensitive
+                pattern=pattern
             )
         
         formatter.format_results(
@@ -103,7 +101,6 @@ def name(ctx, pattern, search_path, case_sensitive, include_hidden, max_depth,
 @cli.command()
 @click.argument('pattern')
 @click.argument('search_path', default='.')
-@click.option('--case-sensitive', is_flag=True, help='Case sensitive search')
 @click.option('--include-hidden', is_flag=True, help='Include hidden files')
 @click.option('--max-depth', type=int, help='Maximum directory depth to search')
 @click.option('--file-pattern', multiple=True, help='File patterns to search in (e.g., *.py)')
@@ -113,7 +110,7 @@ def name(ctx, pattern, search_path, case_sensitive, include_hidden, max_depth,
               default='table', help='Output format')
 @click.option('--max-results', type=int, default=100, help='Maximum number of results')
 @click.pass_context
-def content(ctx, pattern, search_path, case_sensitive, include_hidden, max_depth, 
+def content(ctx, pattern, search_path, include_hidden, max_depth, 
            file_pattern, exclude, exclude_path, output_format, max_results):
     """Search files by content"""
     config = ctx.obj['config']
@@ -144,8 +141,7 @@ def content(ctx, pattern, search_path, case_sensitive, include_hidden, max_depth
             results = searcher.search_by_content(
                 search_path=search_path,
                 pattern=pattern,
-                file_patterns=file_patterns,
-                case_sensitive=case_sensitive
+                file_patterns=file_patterns
             )
         
         formatter.format_results(

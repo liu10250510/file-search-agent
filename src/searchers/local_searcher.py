@@ -35,24 +35,20 @@ class LocalFileSearcher:
     
     def search_by_name(self, 
                       search_path: str, 
-                      pattern: str, 
-                      case_sensitive: bool = False) -> Generator[SearchResult, None, None]:
-        """Search files by filename pattern"""
+                      pattern: str) -> Generator[SearchResult, None, None]:
+        """Search files by filename pattern (case-insensitive)"""
         search_path = Path(search_path).expanduser().resolve()
         
         if not search_path.exists():
             raise FileNotFoundError(f"Search path does not exist: {search_path}")
         
-        if not case_sensitive:
-            pattern = pattern.lower()
+        pattern = pattern.lower()
         
         # Reset visited directories for each new search
         self._visited_dirs.clear()
         
         for file_path in self._walk_directory(search_path):
-            file_name = file_path.name
-            if not case_sensitive:
-                file_name = file_name.lower()
+            file_name = file_path.name.lower()
             
             if fnmatch.fnmatch(file_name, pattern):
                 try:
@@ -72,9 +68,8 @@ class LocalFileSearcher:
                          search_path: str, 
                          pattern: str,
                          file_patterns: List[str] = None,
-                         case_sensitive: bool = False,
                          max_file_size: int = 10 * 1024 * 1024) -> Generator[SearchResult, None, None]:  # 10MB default limit
-        """Search files by content with performance optimizations"""
+        """Search files by content (case-insensitive) with performance optimizations"""
         search_path = Path(search_path).expanduser().resolve()
         
         if not search_path.exists():
@@ -85,8 +80,8 @@ class LocalFileSearcher:
         # Reset visited directories for each new search
         self._visited_dirs.clear()
         
-        # Prepare search pattern
-        search_pattern = pattern.lower() if not case_sensitive else pattern
+        # Prepare search pattern (always case-insensitive)
+        search_pattern = pattern.lower()
         
         for file_path in self._walk_directory(search_path):
             # Check if file matches any of the file patterns
@@ -126,7 +121,7 @@ class LocalFileSearcher:
                             current_line = lines[-1]  # Save incomplete line for next iteration
                             
                             for line in lines[:-1]:  # Process complete lines
-                                line_to_search = line.lower() if not case_sensitive else line
+                                line_to_search = line.lower()
                                 if search_pattern in line_to_search:
                                     content_found = True
                                     if len(matches) < 10:  # Limit matches for performance
@@ -139,7 +134,7 @@ class LocalFileSearcher:
                         
                         # Check the last line if there's any remaining content
                         if current_line and not content_found:
-                            line_to_search = current_line.lower() if not case_sensitive else current_line
+                            line_to_search = current_line.lower()
                             if search_pattern in line_to_search:
                                 content_found = True
                                 if len(matches) < 10:

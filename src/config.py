@@ -10,7 +10,6 @@ class Config:
         'search': {
             'include_hidden': False,
             'max_depth': None,
-            'case_sensitive': False,
             'exclude_patterns': [
                 '*.pyc', '__pycache__', '.git', '.svn', 
                 'node_modules', '.DS_Store', 'Thumbs.db',
